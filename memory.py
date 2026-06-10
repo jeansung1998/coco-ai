@@ -44,6 +44,8 @@ def add_fact(memory, content):
         "time": datetime.now().isoformat()
     })
     return True
+
+
 def delete_fact(memory, keyword):
     facts = memory.get("facts", [])
 
@@ -52,4 +54,17 @@ def delete_fact(memory, keyword):
             facts.remove(item)
             return True
 
-    return False    
+    return False
+
+
+def update_fact(memory, keyword, new_content):
+    facts = memory.get("facts", [])
+
+    for item in facts:
+        if keyword in item.get("content", ""):
+            old_content = item.get("content", "")
+            item["content"] = new_content
+            item["updated_time"] = datetime.now().isoformat()
+            return old_content
+
+    return None

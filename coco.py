@@ -2,12 +2,47 @@ import ollama
 import json
 from datetime import datetime
 
-from memory import load_memory, save_memory, add_fact, delete_fact
+from memory import load_memory, save_memory, add_fact, delete_fact, update_fact
 from logger import save_log
 
 
 def remember(memory, user_input):
     text = user_input.strip()
+
+    if text.startswith("내 이름을") and text.endswith("으로 수정"):
+        new_name = text.replace("내 이름을", "").replace("으로 수정", "").strip()
+        old_name = memory["profile"].get("name", "아직 모름")
+        memory["profile"]["name"] = new_name
+        return f"이름을 수정했습니다. ({old_name} → {new_name})"
+
+    if text.startswith("내가 좋아하는 색을") and text.endswith("으로 수정"):
+        new_color = text.replace("내가 좋아하는 색을", "").replace("으로 수정", "").strip()
+        old_color = memory["likes"].get("color", "아직 모름")
+        memory["likes"]["color"] = new_color
+        return f"좋아하는 색을 수정했습니다. ({old_color} → {new_color})"
+
+    if text.startswith("내가 좋아하는 음식을") and text.endswith("으로 수정"):
+        new_food = text.replace("내가 좋아하는 음식을", "").replace("으로 수정", "").strip()
+        old_food = memory["likes"].get("food", "아직 모름")
+        memory["likes"]["food"] = new_food
+        return f"좋아하는 음식을 수정했습니다. ({old_food} → {new_food})"
+
+    if text.startswith("내 프로젝트를") and text.endswith("으로 수정"):
+        new_project = text.replace("내 프로젝트를", "").replace("으로 수정", "").strip()
+        old_project = memory["projects"].get("main", "아직 모름")
+        memory["projects"]["main"] = new_project
+        return f"프로젝트를 수정했습니다. ({old_project} → {new_project})"
+
+    if "을" in text and "으로 수정" in text:
+        old_keyword = text.split("을")[0].strip()
+        new_content = text.split("을", 1)[1].replace("으로 수정", "").strip()
+
+        old_content = update_fact(memory, old_keyword, new_content)
+
+        if old_content:
+            return f"기억을 수정했습니다. ({old_content} → {new_content})"
+        else:
+            return f"수정할 기억을 찾지 못했습니다. ({old_keyword})"
 
     if "내 이름은" in text:
         name = text.replace("내 이름은", "").replace("이야", "").replace("야", "").strip()
@@ -135,7 +170,7 @@ def ask_coco(memory, user_input):
 def main():
     memory = load_memory()
 
-    print("코코 AI 7.8 시작!")
+    print("코코 AI 7.9 시작!")
     print("모델: llama3.2")
     print(f"기억: {len(memory.get('facts', []))}개 로드 완료")
     print("로그: 연결 완료")
