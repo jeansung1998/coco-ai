@@ -2,11 +2,14 @@ import ollama
 import os
 import json
 import re
+import platform
+import sys
 from datetime import datetime
 from logger import log_message
 
 MEMORY_FILE = "memory.json"
 MODEL = "llama3.2"
+COCO_VERSION = "8.8"
 
 
 def default_memory():
@@ -62,6 +65,17 @@ def clean_memory_sentence(text):
     result = result.strip(" .")
 
     return result
+
+
+def clean_name(name):
+    name = name.strip()
+    endings = ["이야", "야", "입니다", "이에요", "예요", "라고 해", "라고 합니다"]
+
+    for ending in endings:
+        if name.endswith(ending):
+            name = name[:-len(ending)]
+
+    return name.strip()
 
 
 def fact_exists(memory, content):
@@ -122,17 +136,18 @@ def should_remember(user_input):
 
 def update_structured_memory(memory, user_input):
     text = clean_memory_sentence(user_input)
-
     updated = False
 
     name_match = re.search(r"내 이름은\s*([가-힣a-zA-Z0-9]+)", text)
     if name_match:
-        memory["profile"]["name"] = name_match.group(1)
+        memory["profile"]["name"] = clean_name(name_match.group(1))
         updated = True
 
     color_match = re.search(r"좋아하는 색(?:은|깔은)?\s*([가-힣a-zA-Z0-9]+)", text)
     if color_match:
-        memory["likes"]["favorite_color"] = color_match.group(1)
+        color = color_match.group(1).strip()
+        color = color.replace("이야", "").replace("야", "").replace("입니다", "")
+        memory["likes"]["favorite_color"] = color
         updated = True
 
     if "코코 AI" in text or "코코AI" in text:
@@ -189,20 +204,9 @@ def show_profile(memory):
 
     print("\n[프로필]")
 
-    if profile.get("name"):
-        print("이름:", profile.get("name"))
-    else:
-        print("이름: 아직 모름")
-
-    if likes.get("favorite_color"):
-        print("좋아하는 색:", likes.get("favorite_color"))
-    else:
-        print("좋아하는 색: 아직 모름")
-
-    if projects.get("main_project"):
-        print("프로젝트:", projects.get("main_project"))
-    else:
-        print("프로젝트: 아직 모름")
+    print("이름:", profile.get("name", "아직 모름"))
+    print("좋아하는 색:", likes.get("favorite_color", "아직 모름"))
+    print("프로젝트:", projects.get("main_project", "아직 모름"))
 
 
 def search_memory(memory, keyword):
@@ -252,14 +256,6 @@ def find_direct_answer(memory, user_input):
         if projects.get("main_project"):
             return f"{projects.get('main_project')}를 만들고 있어."
 
-    facts = memory.get("facts", [])
-
-    if "좋아하는 색" in question or "좋아하는 색깔" in question:
-        for item in facts:
-            content = clean_memory_sentence(item.get("content", ""))
-            if "좋아하는 색" in content:
-                return content
-
     return None
 
 
@@ -301,6 +297,35 @@ def remove_english_noise(text):
     text = re.sub(r"[A-Za-z]{3,}", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+def show_today():
+    today = datetime.now().strftime("%Y-%m-%d")
+    print(f"코코: 오늘 날짜는 {today}야.")
+
+
+def show_now_time():
+    now = datetime.now().strftime("%H:%M:%S")
+    print(f"코코: 지금 시간은 {now}야.")
+
+
+def show_system_info():
+    print("\n[시스템 정보]")
+    print("운영체제:", platform.system())
+    print("운영체제 버전:", platform.version())
+    print("파이썬 버전:", sys.version.split()[0])
+    print("현재 폴더:", os.getcwd())
+
+
+def show_project_status(memory):
+    print("\n[프로젝트 상태]")
+    print("코코 AI 버전:", COCO_VERSION)
+    print("모델:", MODEL)
+    print("일반 기억:", len(memory.get("facts", [])), "개")
+    print("최근 대화:", len(memory.get("history", [])), "개")
+    print("프로필 이름:", memory.get("profile", {}).get("name", "아직 모름"))
+    print("좋아하는 색:", memory.get("likes", {}).get("favorite_color", "아직 모름"))
+    print("프로젝트:", memory.get("projects", {}).get("main_project", "아직 모름"))
 
 
 def ask_coco(memory, user_input):
@@ -349,10 +374,11 @@ def ask_coco(memory, user_input):
 def main():
     memory = load_memory()
 
-    print("코코 AI 8.7 시작!")
+    print(f"코코 AI {COCO_VERSION} 시작!")
     print(f"모델: {MODEL}")
     print(f"기억: {len(memory.get('facts', []))}개 로드 완료")
     print("명령어: 종료 / 내 프로필 보여줘 / 중요 기억 보여줘 / 중요 기억 개수 / 중요 기억 검색:키워드 / 기억 삭제:키워드")
+    print("추가 명령어: 오늘 날짜 / 지금 시간 / 시스템 정보 / 프로젝트 상태")
     print()
 
     while True:
@@ -368,6 +394,22 @@ def main():
             print("코코: 종료할게.")
             log_message("COCO", "종료")
             break
+
+        if user_input in ["오늘 날짜", "날짜", "오늘"]:
+            show_today()
+            continue
+
+        if user_input in ["지금 시간", "시간", "몇 시야", "몇시야"]:
+            show_now_time()
+            continue
+
+        if user_input == "시스템 정보":
+            show_system_info()
+            continue
+
+        if user_input == "프로젝트 상태":
+            show_project_status(memory)
+            continue
 
         if user_input == "내 프로필 보여줘":
             show_profile(memory)
