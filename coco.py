@@ -8,8 +8,9 @@ from datetime import datetime
 from logger import log_message
 
 MEMORY_FILE = "memory.json"
+NOTES_FILE = "notes.json"
 MODEL = "llama3.2"
-COCO_VERSION = "9.0"
+COCO_VERSION = "9.1"
 
 
 def default_memory():
@@ -45,6 +46,62 @@ def load_memory():
 def save_memory(memory):
     with open(MEMORY_FILE, "w", encoding="utf-8") as f:
         json.dump(memory, f, ensure_ascii=False, indent=2)
+
+
+def load_notes():
+    if not os.path.exists(NOTES_FILE):
+        save_notes([])
+
+    try:
+        with open(NOTES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+
+def save_notes(notes):
+    with open(NOTES_FILE, "w", encoding="utf-8") as f:
+        json.dump(notes, f, ensure_ascii=False, indent=2)
+
+
+def add_note(content):
+    content = content.strip()
+
+    if not content:
+        return False
+
+    notes = load_notes()
+    notes.append({
+        "content": content,
+        "time": datetime.now().isoformat()
+    })
+    save_notes(notes)
+    return True
+
+
+def show_notes():
+    notes = load_notes()
+
+    print("\n[메모 목록]")
+
+    if not notes:
+        print("저장된 메모가 없어.")
+        return
+
+    for i, note in enumerate(notes, start=1):
+        print(f"{i}. {note.get('content', '')}")
+
+
+def delete_note(index):
+    notes = load_notes()
+
+    if index < 1 or index > len(notes):
+        print("코코: 그런 번호의 메모는 없어.")
+        return
+
+    deleted = notes.pop(index - 1)
+    save_notes(notes)
+    print(f"코코: 삭제 완료 - {deleted.get('content', '')}")
 
 
 def clean_memory_sentence(text):
@@ -373,6 +430,7 @@ def show_project_status(memory):
     print("모델:", MODEL)
     print("일반 기억:", len(memory.get("facts", [])), "개")
     print("최근 대화:", len(memory.get("history", [])), "개")
+    print("메모:", len(load_notes()), "개")
     print("프로필 이름:", memory.get("profile", {}).get("name", "아직 모름"))
     print("좋아하는 색:", memory.get("likes", {}).get("favorite_color", "아직 모름"))
     print("프로젝트:", memory.get("projects", {}).get("main_project", "아직 모름"))
@@ -421,6 +479,7 @@ def show_project_files_status():
         "logger.py",
         "memory.py",
         "memory.json",
+        "notes.json",
         ".gitignore",
         "README.md"
     ]
@@ -521,6 +580,7 @@ def main():
     memory = load_memory()
     fix_existing_profile(memory)
     save_memory(memory)
+    load_notes()
 
     print(f"코코 AI {COCO_VERSION} 시작!")
     print(f"모델: {MODEL}")
@@ -528,6 +588,7 @@ def main():
     print("명령어: 종료 / 내 프로필 보여줘 / 중요 기억 보여줘 / 중요 기억 개수 / 중요 기억 검색:키워드 / 기억 삭제:키워드")
     print("로컬 명령어: 오늘 날짜 / 지금 시간 / 시스템 정보 / 프로젝트 상태")
     print("파일 명령어: 현재 폴더 파일 보여줘 / 폴더 목록 보여줘 / 프로젝트 파일 상태 / 파일 읽기:파일명")
+    print("메모 명령어: 메모 저장:내용 / 메모 보여줘 / 메모 삭제:번호")
     print()
 
     while True:
@@ -538,6 +599,29 @@ def main():
 
         log_message("USER", user_input)
         add_history(memory, "user", user_input)
+
+        if user_input.startswith("메모 저장:"):
+            content = user_input.replace("메모 저장:", "").strip()
+
+            if add_note(content):
+                print("코코: 메모 저장 완료.")
+            else:
+                print("코코: 메모 내용을 입력해줘.")
+
+            continue
+
+        if user_input == "메모 보여줘":
+            show_notes()
+            continue
+
+        if user_input.startswith("메모 삭제:"):
+            try:
+                index = int(user_input.replace("메모 삭제:", "").strip())
+                delete_note(index)
+            except:
+                print("코코: 번호를 입력해줘.")
+
+            continue
 
         if user_input in ["종료", "끝", "exit", "quit"]:
             print("코코: 종료할게.")
