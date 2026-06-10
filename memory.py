@@ -28,6 +28,31 @@ def save_memory(memory):
         json.dump(memory, f, ensure_ascii=False, indent=2)
 
 
+def get_importance(content):
+    important_words = [
+        "프로젝트",
+        "목표",
+        "꿈",
+        "중요",
+        "AI",
+        "코코",
+        "개발",
+        "GitHub",
+        "Ollama"
+    ]
+
+    score = 3
+
+    for word in important_words:
+        if word in content:
+            score += 1
+
+    if score > 10:
+        score = 10
+
+    return score
+
+
 def fact_exists(memory, content):
     for item in memory.get("facts", []):
         if item.get("content") == content:
@@ -41,6 +66,7 @@ def add_fact(memory, content):
 
     memory["facts"].append({
         "content": content,
+        "importance": get_importance(content),
         "time": datetime.now().isoformat()
     })
     return True
@@ -64,6 +90,7 @@ def update_fact(memory, keyword, new_content):
         if keyword in item.get("content", ""):
             old_content = item.get("content", "")
             item["content"] = new_content
+            item["importance"] = get_importance(new_content)
             item["updated_time"] = datetime.now().isoformat()
             return old_content
 
@@ -80,5 +107,19 @@ def search_facts(memory, keyword):
 
         if keyword in content:
             results.append(content)
+
+    return results
+
+
+def get_important_facts(memory, min_score=6):
+    results = []
+
+    for item in memory.get("facts", []):
+        importance = item.get("importance", 3)
+
+        if importance >= min_score:
+            results.append(item)
+
+    results.sort(key=lambda x: x.get("importance", 3), reverse=True)
 
     return results
