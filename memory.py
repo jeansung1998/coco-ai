@@ -68,3 +68,17 @@ def update_fact(memory, keyword, new_content):
             return old_content
 
     return None
+
+
+def search_facts(memory, keyword):
+    results = []
+
+    keyword = keyword.strip()
+
+    for item in memory.get("facts", []):
+        content = item.get("content", "")
+
+        if keyword in content:
+            results.append(content)
+
+    return results

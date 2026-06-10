@@ -1,13 +1,110 @@
 import ollama
 import json
-from datetime import datetime
+from datetime import datetime, date
 
-from memory import load_memory, save_memory, add_fact, delete_fact, update_fact
+from memory import load_memory, save_memory, add_fact, delete_fact, update_fact, search_facts
 from logger import save_log
+from backup import backup_memory
+from restore import list_backups, restore_backup
+
+
+def add_history(memory, role, content):
+    memory["history"].append({
+        "role": role,
+        "content": content,
+        "time": datetime.now().isoformat()
+    })
+
+
+def summarize_today(memory):
+    today = date.today().isoformat()
+    today_items = []
+
+    for item in memory.get("history", []):
+        if item.get("time", "").startswith(today):
+            today_items.append(item)
+
+    if not today_items:
+        return "오늘 저장된 대화가 아직 없습니다."
+
+    user_count = 0
+    coco_count = 0
+    topics = []
+
+    for item in today_items:
+        if item.get("role") == "user":
+            user_count += 1
+            topics.append(item.get("content", ""))
+        elif item.get("role") == "coco":
+            coco_count += 1
+
+    lines = []
+    lines.append("[오늘 대화 요약]")
+    lines.append(f"- 사용자 메시지: {user_count}개")
+    lines.append(f"- 코코 답변: {coco_count}개")
+    lines.append("")
+    lines.append("[오늘 나온 주요 사용자 입력]")
+
+    for topic in topics[-10:]:
+        lines.append(f"- {topic}")
+
+    return "\n".join(lines)
 
 
 def remember(memory, user_input):
     text = user_input.strip()
+
+    if text == "오늘 대화 요약":
+        return summarize_today(memory)
+
+    if text == "백업 목록":
+        backups = list_backups()
+
+        if not backups:
+            return "백업 파일이 없습니다."
+
+        lines = ["[백업 목록]"]
+        for i, file in enumerate(backups, start=1):
+            lines.append(f"{i}. {file}")
+
+        return "\n".join(lines)
+
+    if text.startswith("백업 복원"):
+        try:
+            index = int(text.replace("백업 복원", "").strip())
+            restored = restore_backup(index)
+
+            if restored:
+                return f"백업 복원 완료. ({restored})"
+            else:
+                return "복원할 백업을 찾지 못했습니다."
+
+        except:
+            return "사용법: 백업 복원 1"
+
+    if text.endswith("관련 기억 검색"):
+        keyword = text.replace("관련 기억 검색", "").strip()
+        results = search_facts(memory, keyword)
+
+        if results:
+            lines = [f"[{keyword} 관련 기억]"]
+            for item in results:
+                lines.append(f"- {item}")
+            return "\n".join(lines)
+
+        return f"{keyword} 관련 기억을 찾지 못했습니다."
+
+    if text.endswith("기억 검색"):
+        keyword = text.replace("기억 검색", "").strip()
+        results = search_facts(memory, keyword)
+
+        if results:
+            lines = [f"[{keyword} 기억 검색 결과]"]
+            for item in results:
+                lines.append(f"- {item}")
+            return "\n".join(lines)
+
+        return f"{keyword} 기억을 찾지 못했습니다."
 
     if text.startswith("내 이름을") and text.endswith("으로 수정"):
         new_name = text.replace("내 이름을", "").replace("으로 수정", "").strip()
@@ -41,8 +138,8 @@ def remember(memory, user_input):
 
         if old_content:
             return f"기억을 수정했습니다. ({old_content} → {new_content})"
-        else:
-            return f"수정할 기억을 찾지 못했습니다. ({old_keyword})"
+
+        return f"수정할 기억을 찾지 못했습니다. ({old_keyword})"
 
     if "내 이름은" in text:
         name = text.replace("내 이름은", "").replace("이야", "").replace("야", "").strip()
@@ -69,16 +166,16 @@ def remember(memory, user_input):
 
         if delete_fact(memory, keyword):
             return f"기억을 삭제했습니다. ({keyword})"
-        else:
-            return f"해당 기억을 찾지 못했습니다. ({keyword})"
+
+        return f"해당 기억을 찾지 못했습니다. ({keyword})"
 
     if text.startswith("기억해"):
         fact = text.replace("기억해", "").strip()
 
         if add_fact(memory, fact):
             return f"기억했습니다. ({fact})"
-        else:
-            return f"이미 기억하고 있습니다. ({fact})"
+
+        return f"이미 기억하고 있습니다. ({fact})"
 
     auto_patterns = [
         "나는 ",
@@ -170,10 +267,12 @@ def ask_coco(memory, user_input):
 def main():
     memory = load_memory()
 
-    print("코코 AI 7.9 시작!")
+    print("코코 AI 8.3 시작!")
     print("모델: llama3.2")
     print(f"기억: {len(memory.get('facts', []))}개 로드 완료")
     print("로그: 연결 완료")
+    print("백업: 연결 완료")
+    print("복원: 연결 완료")
     print("종료하려면 exit 입력")
 
     while True:
@@ -181,12 +280,17 @@ def main():
 
         if user_input.lower() == "exit":
             save_memory(memory)
+            backup_file = backup_memory(memory)
             print("코코: 기억을 저장하고 종료합니다.")
+            print(f"코코: 백업을 생성했습니다. ({backup_file})")
             break
+
+        add_history(memory, "user", user_input)
 
         remembered = remember(memory, user_input)
 
         if remembered:
+            add_history(memory, "coco", remembered)
             save_memory(memory)
             print("코코:", remembered)
             save_log(user_input, remembered)
@@ -195,23 +299,15 @@ def main():
         recalled = recall(memory, user_input)
 
         if recalled:
+            add_history(memory, "coco", recalled)
+            save_memory(memory)
             print("코코:", recalled)
             save_log(user_input, recalled)
             continue
 
-        memory["history"].append({
-            "role": "user",
-            "content": user_input,
-            "time": datetime.now().isoformat()
-        })
-
         answer = ask_coco(memory, user_input)
 
-        memory["history"].append({
-            "role": "coco",
-            "content": answer,
-            "time": datetime.now().isoformat()
-        })
+        add_history(memory, "coco", answer)
 
         save_memory(memory)
         save_log(user_input, answer)
