@@ -9,7 +9,7 @@ from logger import log_message
 
 MEMORY_FILE = "memory.json"
 MODEL = "llama3.2"
-COCO_VERSION = "8.8"
+COCO_VERSION = "9.0"
 
 
 def default_memory():
@@ -35,6 +35,7 @@ def load_memory():
             if key not in memory:
                 memory[key] = base[key]
 
+        fix_existing_profile(memory)
         return memory
 
     except:
@@ -69,13 +70,65 @@ def clean_memory_sentence(text):
 
 def clean_name(name):
     name = name.strip()
-    endings = ["이야", "야", "입니다", "이에요", "예요", "라고 해", "라고 합니다"]
+    name = name.strip(" .,!?:;")
 
-    for ending in endings:
-        if name.endswith(ending):
-            name = name[:-len(ending)]
+    endings = [
+        "이라고 합니다",
+        "라고 합니다",
+        "이라고 해",
+        "라고 해",
+        "입니다",
+        "이에요",
+        "예요",
+        "이야",
+        "야"
+    ]
 
-    return name.strip()
+    changed = True
+
+    while changed:
+        changed = False
+        for ending in endings:
+            if name.endswith(ending):
+                name = name[:-len(ending)].strip()
+                changed = True
+
+    return name
+
+
+def clean_color(color):
+    color = color.strip()
+    color = color.strip(" .,!?:;")
+
+    endings = [
+        "입니다",
+        "이에요",
+        "예요",
+        "이야",
+        "야"
+    ]
+
+    changed = True
+
+    while changed:
+        changed = False
+        for ending in endings:
+            if color.endswith(ending):
+                color = color[:-len(ending)].strip()
+                changed = True
+
+    return color
+
+
+def fix_existing_profile(memory):
+    profile = memory.get("profile", {})
+    likes = memory.get("likes", {})
+
+    if profile.get("name"):
+        profile["name"] = clean_name(profile.get("name", ""))
+
+    if likes.get("favorite_color"):
+        likes["favorite_color"] = clean_color(likes.get("favorite_color", ""))
 
 
 def fact_exists(memory, content):
@@ -145,9 +198,7 @@ def update_structured_memory(memory, user_input):
 
     color_match = re.search(r"좋아하는 색(?:은|깔은)?\s*([가-힣a-zA-Z0-9]+)", text)
     if color_match:
-        color = color_match.group(1).strip()
-        color = color.replace("이야", "").replace("야", "").replace("입니다", "")
-        memory["likes"]["favorite_color"] = color
+        memory["likes"]["favorite_color"] = clean_color(color_match.group(1))
         updated = True
 
     if "코코 AI" in text or "코코AI" in text:
@@ -203,7 +254,6 @@ def show_profile(memory):
     projects = memory.get("projects", {})
 
     print("\n[프로필]")
-
     print("이름:", profile.get("name", "아직 모름"))
     print("좋아하는 색:", likes.get("favorite_color", "아직 모름"))
     print("프로젝트:", projects.get("main_project", "아직 모름"))
@@ -328,6 +378,102 @@ def show_project_status(memory):
     print("프로젝트:", memory.get("projects", {}).get("main_project", "아직 모름"))
 
 
+def show_current_files():
+    print("\n[현재 폴더 파일]")
+
+    files = []
+
+    for item in os.listdir("."):
+        if os.path.isfile(item):
+            files.append(item)
+
+    if not files:
+        print("파일이 없어.")
+        return
+
+    for filename in sorted(files):
+        size = os.path.getsize(filename)
+        print(f"- {filename} ({size} bytes)")
+
+
+def show_current_folders():
+    print("\n[현재 폴더 목록]")
+
+    folders = []
+
+    for item in os.listdir("."):
+        if os.path.isdir(item):
+            folders.append(item)
+
+    if not folders:
+        print("폴더가 없어.")
+        return
+
+    for folder in sorted(folders):
+        print(f"- {folder}")
+
+
+def show_project_files_status():
+    print("\n[프로젝트 파일 상태]")
+
+    important_files = [
+        "coco.py",
+        "logger.py",
+        "memory.py",
+        "memory.json",
+        ".gitignore",
+        "README.md"
+    ]
+
+    for filename in important_files:
+        if os.path.exists(filename):
+            if os.path.isfile(filename):
+                size = os.path.getsize(filename)
+                print(f"✅ {filename} 있음 ({size} bytes)")
+            else:
+                print(f"✅ {filename} 있음")
+        else:
+            print(f"❌ {filename} 없음")
+
+
+def read_file(filename):
+    filename = filename.strip()
+
+    if not filename:
+        print("코코: 파일 이름을 입력해줘.")
+        return
+
+    if "\\" in filename or "/" in filename:
+        print("코코: 지금은 현재 폴더 안의 파일만 읽을 수 있어.")
+        return
+
+    if not os.path.exists(filename):
+        print("코코: 그런 파일이 없어.")
+        return
+
+    if not os.path.isfile(filename):
+        print("코코: 그건 파일이 아니야.")
+        return
+
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        print(f"\n[{filename} 내용]")
+
+        if len(content) > 3000:
+            print(content[:3000])
+            print("\n...내용이 길어서 여기까지만 보여줄게.")
+        else:
+            print(content)
+
+    except UnicodeDecodeError:
+        print("코코: 이 파일은 텍스트 파일이 아니라서 읽기 어려워.")
+    except Exception as e:
+        print("코코: 파일을 읽는 중 오류가 났어.")
+        print("오류 내용:", e)
+
+
 def ask_coco(memory, user_input):
     memory_text = build_memory_text(memory)
     history_text = build_history_text(memory)
@@ -373,12 +519,15 @@ def ask_coco(memory, user_input):
 
 def main():
     memory = load_memory()
+    fix_existing_profile(memory)
+    save_memory(memory)
 
     print(f"코코 AI {COCO_VERSION} 시작!")
     print(f"모델: {MODEL}")
     print(f"기억: {len(memory.get('facts', []))}개 로드 완료")
     print("명령어: 종료 / 내 프로필 보여줘 / 중요 기억 보여줘 / 중요 기억 개수 / 중요 기억 검색:키워드 / 기억 삭제:키워드")
-    print("추가 명령어: 오늘 날짜 / 지금 시간 / 시스템 정보 / 프로젝트 상태")
+    print("로컬 명령어: 오늘 날짜 / 지금 시간 / 시스템 정보 / 프로젝트 상태")
+    print("파일 명령어: 현재 폴더 파일 보여줘 / 폴더 목록 보여줘 / 프로젝트 파일 상태 / 파일 읽기:파일명")
     print()
 
     while True:
@@ -409,6 +558,23 @@ def main():
 
         if user_input == "프로젝트 상태":
             show_project_status(memory)
+            continue
+
+        if user_input in ["현재 폴더 파일 보여줘", "파일 목록 보여줘", "파일 보여줘"]:
+            show_current_files()
+            continue
+
+        if user_input in ["폴더 목록 보여줘", "폴더 보여줘"]:
+            show_current_folders()
+            continue
+
+        if user_input == "프로젝트 파일 상태":
+            show_project_files_status()
+            continue
+
+        if user_input.startswith("파일 읽기:"):
+            filename = user_input.replace("파일 읽기:", "").strip()
+            read_file(filename)
             continue
 
         if user_input == "내 프로필 보여줘":
