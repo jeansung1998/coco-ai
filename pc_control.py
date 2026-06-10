@@ -4,6 +4,9 @@ import webbrowser
 import urllib.parse
 
 
+PROJECT_FOLDER = r"C:\coco-ai"
+
+
 def open_notepad():
     try:
         os.system("start notepad")
@@ -26,6 +29,78 @@ def open_explorer():
         return "탐색기를 실행했습니다."
     except Exception as e:
         return f"탐색기 실행 중 오류가 발생했습니다: {e}"
+
+
+def get_user_folder(folder_name):
+    home = os.path.expanduser("~")
+
+    folders = {
+        "바탕화면": [
+            os.path.join(home, "Desktop"),
+            os.path.join(home, "OneDrive", "Desktop"),
+        ],
+        "다운로드": [
+            os.path.join(home, "Downloads"),
+        ],
+        "문서": [
+            os.path.join(home, "Documents"),
+            os.path.join(home, "OneDrive", "Documents"),
+        ],
+        "사진": [
+            os.path.join(home, "Pictures"),
+            os.path.join(home, "OneDrive", "Pictures"),
+        ],
+        "음악": [
+            os.path.join(home, "Music"),
+        ],
+        "동영상": [
+            os.path.join(home, "Videos"),
+        ],
+        "프로젝트": [
+            PROJECT_FOLDER,
+        ],
+        "코코": [
+            PROJECT_FOLDER,
+        ],
+        "코코 폴더": [
+            PROJECT_FOLDER,
+        ],
+    }
+
+    candidates = folders.get(folder_name)
+
+    if not candidates:
+        return None
+
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+
+    return candidates[0]
+
+
+def open_folder(path):
+    try:
+        path = path.strip()
+
+        if not path:
+            return "열 폴더 경로가 없습니다."
+
+        shortcut_path = get_user_folder(path)
+        if shortcut_path:
+            path = shortcut_path
+
+        if not os.path.exists(path):
+            return f"폴더를 찾지 못했습니다: {path}"
+
+        if not os.path.isdir(path):
+            return f"폴더가 아닙니다: {path}"
+
+        subprocess.Popen(["explorer", path])
+        return f"폴더를 열었습니다: {path}"
+
+    except Exception as e:
+        return f"폴더 열기 중 오류가 발생했습니다: {e}"
 
 
 def find_chrome_path():
@@ -120,6 +195,35 @@ def handle_pc_command(text):
 
     if text in ["크롬 열어줘", "크롬 실행", "구글 크롬 열어줘"]:
         return open_chrome()
+
+    if text in ["바탕화면 열어줘", "바탕화면 열기"]:
+        return open_folder("바탕화면")
+
+    if text in ["다운로드 열어줘", "다운로드 열기"]:
+        return open_folder("다운로드")
+
+    if text in ["문서 열어줘", "문서 열기"]:
+        return open_folder("문서")
+
+    if text in ["사진 열어줘", "사진 열기"]:
+        return open_folder("사진")
+
+    if text in ["음악 열어줘", "음악 열기"]:
+        return open_folder("음악")
+
+    if text in ["동영상 열어줘", "동영상 열기"]:
+        return open_folder("동영상")
+
+    if text in ["코코 폴더 열어줘", "코코 열어줘", "프로젝트 폴더 열어줘"]:
+        return open_folder("코코")
+
+    if text.startswith("폴더 열어줘:"):
+        path = text.replace("폴더 열어줘:", "", 1).strip()
+        return open_folder(path)
+
+    if text.startswith("폴더 열기:"):
+        path = text.replace("폴더 열기:", "", 1).strip()
+        return open_folder(path)
 
     if text in ["네이버 열어줘", "네이버 실행"]:
         return open_website("https://www.naver.com", "네이버")
