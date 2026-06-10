@@ -6,7 +6,7 @@ import urllib.request
 
 import ollama
 from pc_control import handle_pc_command
-
+from voice import listen, speak, is_exit_command
 try:
     from logger import log
 except:
@@ -253,6 +253,7 @@ def project_files():
         "memory.py",
         "logger.py",
         "pc_control.py",
+        "voice.py",
         "memory.json",
         "notes.json"
     ]
@@ -332,28 +333,168 @@ def ask_ai(user_input, memory):
     return response["message"]["content"]
 
 
+def process_command(user_input, memory, voice_mode=False):
+    pc_result = handle_pc_command(user_input)
+    if pc_result:
+        return pc_result
+
+    if user_input == "기억 보여줘":
+        return memory_text(memory)
+
+    if user_input == "기억 상태":
+        return memory_status(memory)
+
+    if user_input.startswith("기억 검색:"):
+        keyword = user_input.replace("기억 검색:", "", 1).strip()
+        return search_memory(memory, keyword)
+
+    if user_input.startswith("기억 삭제:"):
+        keyword = user_input.replace("기억 삭제:", "", 1).strip()
+        return delete_memory(memory, keyword)
+
+    if user_input.startswith("기억해:"):
+        content = user_input.replace("기억해:", "", 1).strip()
+        return remember(memory, content)
+
+    if user_input.startswith("메모 저장:"):
+        content = user_input.replace("메모 저장:", "", 1).strip()
+        return add_note(content)
+
+    if user_input == "메모 보여줘":
+        return show_notes()
+
+    if user_input.startswith("메모 삭제:"):
+        number_text = user_input.replace("메모 삭제:", "", 1).strip()
+        try:
+            return delete_note(int(number_text))
+        except:
+            return "메모 번호를 숫자로 입력해 주세요."
+
+    if user_input == "현재 폴더 파일 보여줘":
+        return current_files()
+
+    if user_input == "폴더 목록 보여줘":
+        return current_folders()
+
+    if user_input == "프로젝트 파일 상태":
+        return project_files()
+
+    if user_input.startswith("파일 읽기:"):
+        filename = user_input.replace("파일 읽기:", "", 1).strip()
+        return read_file(filename)
+
+    if user_input.startswith("웹 검색:"):
+        query = user_input.replace("웹 검색:", "", 1).strip()
+        return wiki_search(query)
+
+    if user_input.startswith("검색:"):
+        query = user_input.replace("검색:", "", 1).strip()
+        return wiki_search(query)
+
+    memory_message = auto_memory(memory, user_input)
+
+    try:
+        answer = ask_ai(user_input, memory)
+        if memory_message:
+            answer = memory_message + "\n" + answer
+
+        add_history(memory, user_input, answer)
+        log(f"USER: {user_input}")
+        log(f"COCO: {answer}")
+
+        return answer
+
+    except Exception as e:
+        return f"오류가 발생했습니다: {e}"
+
+
+def voice_once(memory):
+    speak("말해 주세요.")
+    user_input = listen()
+
+    if not user_input:
+        answer = "말을 인식하지 못했습니다."
+        print("코코:", answer)
+        speak(answer)
+        return
+
+    print("나:", user_input)
+
+    if user_input in ["종료", "끝", "그만", "멈춰"]:
+        answer = "음성 모드를 종료합니다."
+        print("코코:", answer)
+        speak(answer)
+        return
+
+    answer = process_command(user_input, memory, voice_mode=True)
+    print("코코:", answer)
+    speak(answer)
+
+
+def voice_loop(memory):
+    speak("음성 대화 모드를 시작합니다. 종료하려면 그만이라고 말하세요.")
+
+    fail_count = 0
+
+    while True:
+        user_input = listen()
+
+        if not user_input:
+            fail_count += 1
+
+            print(f"코코: 잘 못 들었습니다. ({fail_count}/3)")
+
+            if fail_count >= 3:
+                answer = "음성 대화를 종료합니다."
+                print("코코:", answer)
+                speak(answer)
+                break
+
+            continue
+
+        fail_count = 0
+
+        print("나:", user_input)
+
+        if is_exit_command(user_input):
+            answer = "음성 대화 모드를 종료합니다."
+            print("코코:", answer)
+            speak(answer)
+            break
+
+        answer = process_command(
+            user_input,
+            memory,
+            voice_mode=True
+        )
+
+        print("코코:", answer)
+        speak(answer)
+
+
 def main():
     memory = load_memory()
 
     memory["projects"]["코코 AI"] = (
-        "코코 AI 9.4 Recovery 진행 중. "
-        "9.3.1 기억 시스템 복구, pc_control.py 연결, "
-        "PC 제어 1단계 준비 완료."
+        "코코 AI 9.5.1 진행 중. "
+        "음성 입력과 음성 출력 연결 완료, "
+        "텍스트 명령과 음성 명령을 함께 처리 가능."
     )
     save_memory(memory)
 
-    print("코코 AI 9.4 Recovery 시작!")
+    print("코코 AI 9.5.1 시작!")
     print(f"모델: {MODEL_NAME}")
-    print("coco.py 복구 완료")
-    print("PC 제어 연결 완료")
+    print("음성 입력/출력 연결 완료")
     print()
     print("명령어:")
+    print("음성 모드 / 음성 대화")
     print("기억 보여줘 / 기억 상태 / 기억 검색:키워드 / 기억 삭제:키워드 / 기억해:내용")
     print("메모 저장:내용 / 메모 보여줘 / 메모 삭제:번호")
     print("현재 폴더 파일 보여줘 / 폴더 목록 보여줘 / 프로젝트 파일 상태 / 파일 읽기:파일명")
     print("웹 검색:검색어 / 검색:검색어")
     print("메모장 열어줘 / 계산기 열어줘 / 크롬 열어줘 / 탐색기 열어줘")
-    print("사이트 열어줘:주소")
+    print("네이버 열어줘 / 유튜브 열어줘 / 검색해줘:검색어")
+    print("바탕화면 열어줘 / 다운로드 열어줘 / 코코 폴더 열어줘")
     print("종료")
     print()
 
@@ -367,93 +508,16 @@ def main():
             print("코코: 종료합니다.")
             break
 
-        pc_result = handle_pc_command(user_input)
-        if pc_result:
-            print("코코:", pc_result)
+        if user_input == "음성 모드":
+            voice_once(memory)
             continue
 
-        if user_input == "기억 보여줘":
-            print("코코:", memory_text(memory))
+        if user_input == "음성 대화":
+            voice_loop(memory)
             continue
 
-        if user_input == "기억 상태":
-            print("코코:", memory_status(memory))
-            continue
-
-        if user_input.startswith("기억 검색:"):
-            keyword = user_input.replace("기억 검색:", "", 1).strip()
-            print("코코:", search_memory(memory, keyword))
-            continue
-
-        if user_input.startswith("기억 삭제:"):
-            keyword = user_input.replace("기억 삭제:", "", 1).strip()
-            print("코코:", delete_memory(memory, keyword))
-            continue
-
-        if user_input.startswith("기억해:"):
-            content = user_input.replace("기억해:", "", 1).strip()
-            print("코코:", remember(memory, content))
-            continue
-
-        if user_input.startswith("메모 저장:"):
-            content = user_input.replace("메모 저장:", "", 1).strip()
-            print("코코:", add_note(content))
-            continue
-
-        if user_input == "메모 보여줘":
-            print("코코:", show_notes())
-            continue
-
-        if user_input.startswith("메모 삭제:"):
-            number_text = user_input.replace("메모 삭제:", "", 1).strip()
-            try:
-                print("코코:", delete_note(int(number_text)))
-            except:
-                print("코코: 메모 번호를 숫자로 입력해 주세요.")
-            continue
-
-        if user_input == "현재 폴더 파일 보여줘":
-            print("코코:", current_files())
-            continue
-
-        if user_input == "폴더 목록 보여줘":
-            print("코코:", current_folders())
-            continue
-
-        if user_input == "프로젝트 파일 상태":
-            print("코코:", project_files())
-            continue
-
-        if user_input.startswith("파일 읽기:"):
-            filename = user_input.replace("파일 읽기:", "", 1).strip()
-            print("코코:", read_file(filename))
-            continue
-
-        if user_input.startswith("웹 검색:"):
-            query = user_input.replace("웹 검색:", "", 1).strip()
-            print("코코:", wiki_search(query))
-            continue
-
-        if user_input.startswith("검색:"):
-            query = user_input.replace("검색:", "", 1).strip()
-            print("코코:", wiki_search(query))
-            continue
-
-        memory_message = auto_memory(memory, user_input)
-
-        try:
-            answer = ask_ai(user_input, memory)
-            if memory_message:
-                answer = memory_message + "\n" + answer
-
-            print("코코:", answer)
-            add_history(memory, user_input, answer)
-            log(f"USER: {user_input}")
-            log(f"COCO: {answer}")
-
-        except Exception as e:
-            print("코코: 오류가 발생했습니다.")
-            print(e)
+        answer = process_command(user_input, memory)
+        print("코코:", answer)
 
 
 if __name__ == "__main__":
