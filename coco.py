@@ -1,32 +1,9 @@
 import ollama
-import os
 import json
 from datetime import datetime
 
-MEMORY_FILE = "memory.json"
-
-
-def default_memory():
-    return {
-        "profile": {},
-        "likes": {},
-        "projects": {},
-        "facts": [],
-        "history": []
-    }
-
-
-def load_memory():
-    if not os.path.exists(MEMORY_FILE):
-        return default_memory()
-
-    with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_memory(memory):
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(memory, f, ensure_ascii=False, indent=2)
+from memory import load_memory, save_memory, add_fact, delete_fact
+from logger import save_log
 
 
 def remember(memory, user_input):
@@ -52,13 +29,37 @@ def remember(memory, user_input):
         memory["projects"]["main"] = project
         return f"프로젝트를 기억했습니다. ({project})"
 
+    if text.endswith("삭제"):
+        keyword = text.replace("삭제", "").strip()
+
+        if delete_fact(memory, keyword):
+            return f"기억을 삭제했습니다. ({keyword})"
+        else:
+            return f"해당 기억을 찾지 못했습니다. ({keyword})"
+
     if text.startswith("기억해"):
         fact = text.replace("기억해", "").strip()
-        memory["facts"].append({
-            "content": fact,
-            "time": datetime.now().isoformat()
-        })
-        return f"기억했습니다. ({fact})"
+
+        if add_fact(memory, fact):
+            return f"기억했습니다. ({fact})"
+        else:
+            return f"이미 기억하고 있습니다. ({fact})"
+
+    auto_patterns = [
+        "나는 ",
+        "내 취미는 ",
+        "내 목표는 ",
+        "내 꿈은 ",
+        "나는 지금 ",
+        "나는 앞으로 "
+    ]
+
+    for pattern in auto_patterns:
+        if text.startswith(pattern):
+            if add_fact(memory, text):
+                return f"자동 기억했습니다. ({text})"
+            else:
+                return f"이미 기억하고 있습니다. ({text})"
 
     return None
 
@@ -79,25 +80,48 @@ def recall(memory, user_input):
         return memory["projects"].get("main", "아직 모릅니다.")
 
     if "뭘 기억" in text or "기억한 것" in text:
+        lines = []
+
+        lines.append("[프로필]")
+        lines.append(f"- 이름: {memory['profile'].get('name', '아직 모름')}")
+
+        lines.append("")
+        lines.append("[좋아하는 것]")
+        lines.append(f"- 음식: {memory['likes'].get('food', '아직 모름')}")
+        lines.append(f"- 색: {memory['likes'].get('color', '아직 모름')}")
+
+        lines.append("")
+        lines.append("[프로젝트]")
+        lines.append(f"- 메인 프로젝트: {memory['projects'].get('main', '아직 모름')}")
+
+        lines.append("")
+        lines.append("[기타 기억]")
+
         facts = memory.get("facts", [])
-        if not facts:
-            return "아직 기억한 내용이 없습니다."
-        return "\n".join([f"- {item['content']}" for item in facts])
+
+        if facts:
+            for item in facts:
+                lines.append(f"- {item['content']}")
+        else:
+            lines.append("- 아직 없음")
+
+        return "\n".join(lines)
 
     return None
 
 
 def ask_coco(memory, user_input):
     prompt = f"""
-너는 사용자의 개인 AI 비서 코코 AI다.
+너의 이름은 코코 AI다.
+너는 사용자의 개인 AI 비서다.
+항상 한국어로 대답한다.
+사용자의 기억을 참고한다.
 
-저장된 사용자 기억:
+사용자 기억:
 {json.dumps(memory, ensure_ascii=False, indent=2)}
 
 사용자 질문:
 {user_input}
-
-위 기억을 참고해서 자연스럽게 한국어로 대답해.
 """
 
     response = ollama.chat(
@@ -111,7 +135,10 @@ def ask_coco(memory, user_input):
 def main():
     memory = load_memory()
 
-    print("코코 AI 5호 시작!")
+    print("코코 AI 7.8 시작!")
+    print("모델: llama3.2")
+    print(f"기억: {len(memory.get('facts', []))}개 로드 완료")
+    print("로그: 연결 완료")
     print("종료하려면 exit 입력")
 
     while True:
@@ -123,14 +150,18 @@ def main():
             break
 
         remembered = remember(memory, user_input)
+
         if remembered:
             save_memory(memory)
             print("코코:", remembered)
+            save_log(user_input, remembered)
             continue
 
         recalled = recall(memory, user_input)
+
         if recalled:
             print("코코:", recalled)
+            save_log(user_input, recalled)
             continue
 
         memory["history"].append({
@@ -148,6 +179,8 @@ def main():
         })
 
         save_memory(memory)
+        save_log(user_input, answer)
+
         print("코코:", answer)
 
 
