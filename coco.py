@@ -197,10 +197,34 @@ def auto_memory(memory, text):
             save_memory(memory)
             return f"좋아하는 {key}을 기억했습니다."
 
-    if "주말" in text and "개발" in text:
-        memory["habits"]["주말"] = "코코 AI 개발"
-        save_memory(memory)
-        return "주말 개발 습관을 기억했습니다."
+    if "주말" in text:
+        activity = text.replace("주말에는", "").replace("주말에", "").replace("주말은", "").strip()
+
+        if activity:
+            memory["habits"]["주말"] = activity
+            save_memory(memory)
+            return "주말 습관을 기억했습니다."
+
+    if "퇴근 후" in text or "퇴근후" in text:
+        activity = text.replace("퇴근 후에는", "").replace("퇴근 후", "").replace("퇴근후에는", "").replace("퇴근후", "").strip()
+
+        if activity:
+            memory["habits"]["퇴근후"] = activity
+            save_memory(memory)
+            return "퇴근 후 습관을 기억했습니다."
+    if "자주" in text:
+        activity = text.strip()
+
+        if activity:
+            count = 1
+
+            while f"자주하는것_{count}" in memory["habits"]:
+                count += 1
+
+            memory["habits"][f"자주하는것_{count}"] = activity
+
+            save_memory(memory)
+            return "자주 하는 행동을 기억했습니다."
 
     return None
 
@@ -592,7 +616,7 @@ def main():
     )
     save_memory(memory)
 
-    print("코코 AI 9.5.4 시작!")
+    print("코코 AI 10.0 시작!")
     print(f"모델: {MODEL_NAME}")
     print("음성 입력/출력 연결 완료")
     print()
