@@ -334,6 +334,27 @@ def ask_ai(user_input, memory):
 
 
 def process_command(user_input, memory, voice_mode=False):
+    user_input = user_input.strip()
+    compact_input = user_input.replace(" ", "")
+
+    pc_aliases = {
+        "네이버열어줘": "네이버 열어줘",
+        "구글열어줘": "구글 열어줘",
+        "유튜브열어줘": "유튜브 열어줘",
+        "깃허브열어줘": "깃허브 열어줘",
+        "챗GPT열어줘": "챗GPT 열어줘",
+        "메모장열어줘": "메모장 열어줘",
+        "계산기열어줘": "계산기 열어줘",
+        "크롬열어줘": "크롬 열어줘",
+        "탐색기열어줘": "탐색기 열어줘",
+        "바탕화면열어줘": "바탕화면 열어줘",
+        "다운로드열어줘": "다운로드 열어줘",
+        "코코폴더열어줘": "코코 폴더 열어줘",
+    }
+
+    if compact_input in pc_aliases:
+        user_input = pc_aliases[compact_input]
+
     pc_result = handle_pc_command(user_input)
     if pc_result:
         return pc_result
@@ -476,13 +497,13 @@ def main():
     memory = load_memory()
 
     memory["projects"]["코코 AI"] = (
-        "코코 AI 9.5.1 진행 중. "
+        "코코 AI 9.5.3 진행 중. "
         "음성 입력과 음성 출력 연결 완료, "
         "텍스트 명령과 음성 명령을 함께 처리 가능."
     )
     save_memory(memory)
 
-    print("코코 AI 9.5.1 시작!")
+    print("코코 AI 9.5.4 시작!")
     print(f"모델: {MODEL_NAME}")
     print("음성 입력/출력 연결 완료")
     print()
