@@ -2,10 +2,45 @@ import speech_recognition as sr
 import pyttsx3
 
 
+WAKE_WORDS = [
+    "코코야",
+    "코코",
+    "야 코코",
+    "야코코",
+    "꼬꼬야",
+    "코꼬야"
+]
+
+
+def remove_wake_word(text):
+    if not text:
+        return ""
+
+    text = text.strip()
+    compact = text.replace(" ", "")
+
+    wake_only_words = [
+        "코코야",
+        "코코",
+        "야코코",
+        "꼬꼬야",
+        "코꼬야"
+    ]
+
+    if compact in wake_only_words:
+        return "코코야"
+
+    for word in WAKE_WORDS:
+        if text.startswith(word):
+            return text.replace(word, "", 1).strip()
+
+    return text
+
+
 def speak(text):
     try:
         engine = pyttsx3.init()
-        engine.setProperty("rate", 170)
+        engine.setProperty("rate", 165)
         engine.say(text)
         engine.runAndWait()
         return True
@@ -18,15 +53,20 @@ def speak(text):
 def listen():
     recognizer = sr.Recognizer()
 
+    recognizer.energy_threshold = 300
+    recognizer.dynamic_energy_threshold = True
+    recognizer.pause_threshold = 1.4
+    recognizer.non_speaking_duration = 0.8
+
     try:
         with sr.Microphone() as source:
             print("코코: 듣는 중입니다.")
-            recognizer.adjust_for_ambient_noise(source, duration=1.0)
+            recognizer.adjust_for_ambient_noise(source, duration=0.8)
 
             audio = recognizer.listen(
                 source,
-                timeout=8,
-                phrase_time_limit=6
+                timeout=10,
+                phrase_time_limit=15
             )
 
         try:
@@ -35,7 +75,8 @@ def listen():
                 language="ko-KR"
             )
 
-            return text.strip()
+            text = text.strip()
+            return remove_wake_word(text)
 
         except sr.UnknownValueError:
             return ""
@@ -46,11 +87,15 @@ def listen():
     except sr.WaitTimeoutError:
         return ""
 
-    except:
+    except Exception as e:
+        print(f"음성 입력 오류: {e}")
         return ""
 
 
 def is_exit_command(text):
+    if not text:
+        return False
+
     text = text.replace(" ", "").strip()
 
     exit_words = [
