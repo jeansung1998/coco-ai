@@ -1,6 +1,26 @@
 import speech_recognition as sr
 import pyttsx3
+WAKE_WORDS = [
+    "코코야",
+    "코코",
+    "야 코코",
+    "야코코",
+    "꼬꼬야",
+    "코꼬야"
+]
 
+
+def remove_wake_word(text):
+    if not text:
+        return ""
+
+    text = text.strip()
+
+    for word in WAKE_WORDS:
+        if text.startswith(word):
+            return text.replace(word, "", 1).strip()
+
+    return text
 
 def speak(text):
     try:
@@ -35,7 +55,7 @@ def listen():
                 language="ko-KR"
             )
 
-            return text.strip()
+            return remove_wake_word(text)
 
         except sr.UnknownValueError:
             return ""
