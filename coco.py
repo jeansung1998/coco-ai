@@ -192,6 +192,19 @@ def auto_memory(memory, text):
         key = left.replace("내가 좋아하는", "").strip()
         value = right.strip()
 
+        split_words = [
+            " 그리고 ",
+            " 그리고",
+            " 주말",
+            " 퇴근",
+            " 하지만",
+            " 근데"
+        ]
+
+        for word in split_words:
+            if word in value:
+                value = value.split(word, 1)[0].strip()
+
         if key and value:
             memory["likes"][key] = value
             save_memory(memory)
@@ -516,7 +529,62 @@ def process_command(user_input, memory, voice_mode=False):
     memory_message = auto_memory(memory, user_input)
 
     try:
+
+        if "오늘 뭐 할까" in user_input:
+            habits = memory.get("habits", {})
+
+            if "주말" in habits:
+                return f"주말에는 {habits['주말']}.\n오늘도 해볼래?"
+
+            if "퇴근후" in habits:
+                return f"퇴근 후에는 {habits['퇴근후']}.\n오늘도 해볼래?"
+            
+        if "내 습관이 뭐야" in user_input:
+            habits = memory.get("habits", {})
+
+            if not habits:
+                return "아직 기억된 습관이 없어."
+
+            result = "내가 기억하는 습관은:\n"
+
+            for key, value in habits.items():
+                result += f"- {key}: {value}\n"
+
+            return result 
+
+        if "내가 뭘 좋아하지" in user_input:
+            likes = memory.get("likes", {})
+
+            if not likes:
+                return "아직 기억된 취향이 없어."
+
+            result = "내가 기억하는 취향은:\n"
+
+            for key, value in likes.items():
+                result += f"- {key}: {value}\n"
+
+            return result   
+        
+        if "나는 어떤 사람이야" in user_input:
+            result = "내가 기억하기로는:\n\n"
+
+            likes = memory.get("likes", {})
+            habits = memory.get("habits", {})
+
+            if likes:
+                result += "[취향]\n"
+                for key, value in likes.items():
+                    result += f"- {key}: {value}\n"
+
+            if habits:
+                result += "\n[습관]\n"
+                for key, value in habits.items():
+                    result += f"- {key}: {value}\n"
+
+            return result
+        
         answer = ask_ai(user_input, memory)
+
         if memory_message:
             answer = memory_message + "\n" + answer
 
