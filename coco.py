@@ -24,6 +24,7 @@ def default_memory():
         "profile": {},
         "likes": {},
         "projects": {},
+        "habits": {},
         "facts": [],
         "history": []
     }
@@ -93,6 +94,10 @@ def memory_text(memory):
     lines.append("[프로젝트]")
     for k, v in memory.get("projects", {}).items():
         lines.append(f"- {k}: {v}")
+
+    lines.append("[습관]")
+    for k, v in memory.get("habits", {}).items():
+        lines.append(f"- {k}: {v}")    
 
     lines.append("[기억]")
     for item in memory.get("facts", []):
@@ -186,10 +191,16 @@ def auto_memory(memory, text):
         left, right = text.split("은", 1)
         key = left.replace("내가 좋아하는", "").strip()
         value = right.strip()
+
         if key and value:
             memory["likes"][key] = value
             save_memory(memory)
             return f"좋아하는 {key}을 기억했습니다."
+
+    if "주말" in text and "개발" in text:
+        memory["habits"]["주말"] = "코코 AI 개발"
+        save_memory(memory)
+        return "주말 개발 습관을 기억했습니다."
 
     return None
 
@@ -338,22 +349,88 @@ def process_command(user_input, memory, voice_mode=False):
     compact_input = user_input.replace(" ", "")
 
     pc_aliases = {
-        "네이버열어줘": "네이버 열어줘",
-        "구글열어줘": "구글 열어줘",
+
+        # 유튜브
         "유튜브열어줘": "유튜브 열어줘",
-        "깃허브열어줘": "깃허브 열어줘",
-        "챗GPT열어줘": "챗GPT 열어줘",
-        "메모장열어줘": "메모장 열어줘",
+        "유튜브켜줘": "유튜브 열어줘",
+        "유튜브실행해줘": "유튜브 열어줘",
+        "유튜브실행": "유튜브 열어줘",
+        "유튜브틀어줘": "유튜브 열어줘",
+        "유튜브열기": "유튜브 열어줘",
+
+        # 네이버
+        "네이버열어줘": "네이버 열어줘",
+        "네이버켜줘": "네이버 열어줘",
+        "네이버실행": "네이버 열어줘",
+        "네이버실행해줘": "네이버 열어줘",
+
+        # 구글
+        "구글열어줘": "구글 열어줘",
+        "구글켜줘": "구글 열어줘",
+        "구글실행": "구글 열어줘",
+
+        # 계산기
         "계산기열어줘": "계산기 열어줘",
+        "계산기켜줘": "계산기 열어줘",
+        "계산기실행": "계산기 열어줘",
+
+        # 크롬
         "크롬열어줘": "크롬 열어줘",
-        "탐색기열어줘": "탐색기 열어줘",
-        "바탕화면열어줘": "바탕화면 열어줘",
-        "다운로드열어줘": "다운로드 열어줘",
-        "코코폴더열어줘": "코코 폴더 열어줘",
+        "크롬켜줘": "크롬 열어줘",
+        "크롬실행": "크롬 열어줘",
     }
 
     if compact_input in pc_aliases:
         user_input = pc_aliases[compact_input]
+    # 자연어 명령 처리
+
+    # 자연어 명령 처리
+
+    text = compact_input
+
+    # 유튜브
+    if "유튜브" in text:
+        youtube_words = [
+            "열",
+            "켜",
+            "실행",
+            "틀",
+            "보고싶",
+            "보고싶어",
+            "보여줘"
+        ]
+
+        if any(word in text for word in youtube_words):
+            user_input = "유튜브 열어줘"
+
+    # 네이버
+    if "네이버" in text:
+        naver_words = [
+            "열",
+            "켜",
+            "실행",
+            "검색"
+        ]
+
+        if any(word in text for word in naver_words):
+            user_input = "네이버 열어줘"
+
+    # 계산기
+    if "계산기" in text or "계산" in text:
+        calc_words = [
+            "열",
+            "켜",
+            "실행",
+            "쓰",
+            "사용",
+            "하고싶",
+            "싶어",
+            "싶다",
+            "해보고싶"
+        ]
+
+        if any(word in text for word in calc_words) or text in ["계산기", "계산"]:
+            return handle_pc_command("계산기 열어줘")
 
     pc_result = handle_pc_command(user_input)
     if pc_result:
@@ -476,6 +553,18 @@ def voice_loop(memory):
         fail_count = 0
 
         print("나:", user_input)
+        
+        if user_input in ["코코야", "코코", "야코코", "야 코코"]:
+            answer = "네, 부르셨나요?"
+            print("코코:", answer)
+            speak(answer)
+
+            user_input = listen()
+
+            if not user_input:
+                continue
+
+            print("나:", user_input)
 
         if is_exit_command(user_input):
             answer = "음성 대화 모드를 종료합니다."
