@@ -7,6 +7,8 @@ import urllib.request
 import ollama
 from pc_control import handle_pc_command
 from voice import listen, speak, is_exit_command
+from assistant_engine import personal_assistant_reply
+
 try:
     from logger import log
 except:
@@ -591,6 +593,17 @@ def process_command(user_input, memory, voice_mode=False):
 
             return "아직 좋아하는 음식을 기억하지 못했어."
         
+        if "심심해" in user_input or "뭐 하지" in user_input or "할 거 추천" in user_input:
+            habits = memory.get("habits", {})
+
+            if "주말" in habits:
+                return f"주말에는 {habits['주말']}.\n지금도 그거 해보는 건 어때?"
+
+            if "퇴근후" in habits:
+                return f"퇴근 후에는 {habits['퇴근후']}.\n지금도 해볼래?"
+
+            return "아직 추천할 만한 습관 기억이 없어."
+        
         answer = ask_ai(user_input, memory)
 
         if memory_message:
@@ -724,6 +737,13 @@ def main():
 
         if user_input == "음성 대화":
             voice_loop(memory)
+            continue
+
+        assistant_answer = personal_assistant_reply(user_input, memory)
+
+        if assistant_answer:
+            print("코코:", assistant_answer)
+            speak(assistant_answer)
             continue
 
         answer = process_command(user_input, memory)
