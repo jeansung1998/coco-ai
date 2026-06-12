@@ -583,6 +583,14 @@ def process_command(user_input, memory, voice_mode=False):
 
             return result
         
+        if "오늘 뭐 먹을까" in user_input:
+            likes = memory.get("likes", {})
+
+            if "음식" in likes:
+                return f"{likes['음식']}을 좋아하니까 {likes['음식']} 어때?"
+
+            return "아직 좋아하는 음식을 기억하지 못했어."
+        
         answer = ask_ai(user_input, memory)
 
         if memory_message:
