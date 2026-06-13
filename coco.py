@@ -18,6 +18,10 @@ from startup_assistant import build_startup_message
 from morning_briefing import build_morning_briefing
 from conversation_engine import natural_conversation
 from voice_filter import clean_for_voice
+from voice_message_engine import (
+    startup_voice_message,
+    briefing_voice_message
+)
 
 try:
     from logger import log
@@ -721,7 +725,7 @@ def main():
     print(startup_message)
     print()
 
-    speak(clean_for_voice(startup_message))
+    speak(startup_voice_message(memory))
 
     briefing = build_morning_briefing(memory)
 
@@ -729,7 +733,7 @@ def main():
     print(briefing)
     print()
 
-    speak(clean_for_voice(briefing))
+    speak(briefing_voice_message(memory))
 
     print("코코 AI 10.0 시작!")
     print(f"모델: {MODEL_NAME}")
