@@ -925,6 +925,53 @@ def show_completed_goals():
 
     return "\n".join(lines)
 
+def build_growth_report(memory):
+    history = load_project_history()
+    goals = load_project_goals()
+
+    project_items = history.get("history", [])
+    current_goal = goals.get("current_goal", "")
+    completed_goals = goals.get("completed", [])
+
+    facts_count = len(memory.get("facts", []))
+    likes_count = len(memory.get("likes", {}))
+    habits_count = len(memory.get("habits", {}))
+    projects_count = len(memory.get("projects", {}))
+    relations_count = len(memory.get("relations", {}))
+
+    latest_update = "없음"
+    if project_items:
+        latest_update = project_items[-1].get("title", "없음")
+
+    lines = []
+    lines.append("[코코 성장 보고서]")
+    lines.append("")
+    lines.append("[기억 성장]")
+    lines.append(f"- 기억: {facts_count}개")
+    lines.append(f"- 취향: {likes_count}개")
+    lines.append(f"- 습관: {habits_count}개")
+    lines.append(f"- 프로젝트: {projects_count}개")
+    lines.append(f"- 관계: {relations_count}개")
+    lines.append("")
+    lines.append("[프로젝트 성장]")
+    lines.append(f"- 프로젝트 기록: {len(project_items)}개")
+    lines.append(f"- 최근 발전: {latest_update}")
+    lines.append("")
+    lines.append("[목표 상태]")
+
+    if current_goal:
+        lines.append(f"- 현재 목표: {current_goal}")
+    else:
+        lines.append("- 현재 목표: 없음")
+
+    lines.append(f"- 완료한 목표: {len(completed_goals)}개")
+    lines.append("")
+    lines.append("[다음 추천]")
+    lines.append("- 모바일 앱 UI 제작")
+    lines.append("- 앱 출시 준비 단계 정리")
+
+    return "\n".join(lines)
+
 def main():
     memory = load_memory()
 
@@ -1015,6 +1062,13 @@ def main():
 
         if "완료된 목표 보여줘" in user_input:
             answer = show_completed_goals()
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "코코 성장 보고서 보여줘" in user_input or "성장 리포트 보여줘" in user_input:
+            answer = build_growth_report(memory)
 
             print("코코:", answer)
             speak(clean_for_voice(answer))
