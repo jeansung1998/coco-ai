@@ -792,6 +792,38 @@ def search_project_history(keyword):
 
     return "\n".join(lines)
 
+def build_project_review():
+    history = load_project_history()
+
+    items = history.get("history", [])
+
+    if not items:
+        return "아직 프로젝트 기록이 없어."
+
+    lines = []
+
+    lines.append("[오늘 개발 회고]")
+    lines.append("")
+
+    lines.append("최근 작업:")
+
+    for item in items[-5:]:
+        lines.append(
+            f"- {item.get('title')} | {item.get('content')}"
+        )
+
+    lines.append("")
+    lines.append(f"총 기록 수: {len(items)}개")
+    lines.append(
+        f"현재 버전: {history.get('current_version', '알 수 없음')}"
+    )
+
+    lines.append("")
+    lines.append("다음 추천:")
+    lines.append("- 앱 출시 준비")
+
+    return "\n".join(lines)
+
 def main():
     memory = load_memory()
 
@@ -838,6 +870,13 @@ def main():
         user_input = input("나: ").strip()
 
         if not user_input:
+            continue
+
+        if "오늘 개발 정리해줘" in user_input:
+            answer = build_project_review()
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
             continue
 
         if "프로젝트 히스토리 보여줘" in user_input or "개발 기록 보여줘" in user_input:
