@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 
 PROJECT_HISTORY_FILE = "project_history.json"
+PROJECT_GOAL_FILE = "project_goals.json"
 
 import urllib.parse
 import urllib.request
@@ -856,6 +857,74 @@ def build_project_stats(memory):
 
     return "\n".join(lines)
 
+def load_project_goals():
+    if not os.path.exists(PROJECT_GOAL_FILE):
+        return {
+            "current_goal": "",
+            "completed": []
+        }
+
+    with open(PROJECT_GOAL_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_project_goals(data):
+    with open(PROJECT_GOAL_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def set_project_goal(goal):
+    data = load_project_goals()
+
+    data["current_goal"] = goal
+
+    save_project_goals(data)
+
+    return f"프로젝트 목표 저장 완료: {goal}"
+
+
+def get_project_goal():
+    data = load_project_goals()
+
+    goal = data.get("current_goal", "")
+
+    if not goal:
+        return "현재 설정된 목표가 없어."
+
+    return f"현재 목표는 {goal} 이야."
+
+
+def complete_project_goal():
+    data = load_project_goals()
+
+    goal = data.get("current_goal", "")
+
+    if not goal:
+        return "완료할 목표가 없어."
+
+    data["completed"].append(goal)
+    data["current_goal"] = ""
+
+    save_project_goals(data)
+
+    return f"목표 완료 처리: {goal}"
+
+
+def show_completed_goals():
+    data = load_project_goals()
+
+    completed = data.get("completed", [])
+
+    if not completed:
+        return "완료된 목표가 없어."
+
+    lines = ["[완료된 목표]"]
+
+    for item in completed:
+        lines.append(f"- {item}")
+
+    return "\n".join(lines)
+
 def main():
     memory = load_memory()
 
@@ -913,6 +982,39 @@ def main():
 
         if "코코 AI 개발 현황 보여줘" in user_input or "프로젝트 통계 보여줘" in user_input:
             answer = build_project_stats(memory)
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if user_input.startswith("프로젝트 목표"):
+            goal = user_input.replace("프로젝트 목표", "").strip()
+
+            if goal:
+                answer = set_project_goal(goal)
+            else:
+                answer = "목표 내용을 말해줘."
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "현재 목표 뭐야" in user_input:
+            answer = get_project_goal()
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "목표 완료" in user_input:
+            answer = complete_project_goal()
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "완료된 목표 보여줘" in user_input:
+            answer = show_completed_goals()
 
             print("코코:", answer)
             speak(clean_for_voice(answer))
