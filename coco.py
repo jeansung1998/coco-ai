@@ -17,6 +17,7 @@ from dashboard_engine import handle_dashboard_command
 from startup_assistant import build_startup_message
 from morning_briefing import build_morning_briefing
 from conversation_engine import natural_conversation
+from voice_filter import clean_for_voice
 
 try:
     from logger import log
@@ -635,7 +636,7 @@ def voice_once(memory):
     if not user_input:
         answer = "말을 인식하지 못했습니다."
         print("코코:", answer)
-        speak(answer)
+        speak(clean_for_voice(answer))
         return
 
     print("나:", user_input)
@@ -643,12 +644,12 @@ def voice_once(memory):
     if user_input in ["종료", "끝", "그만", "멈춰"]:
         answer = "음성 모드를 종료합니다."
         print("코코:", answer)
-        speak(answer)
+        speak(clean_for_voice(answer))
         return
 
     answer = process_command(user_input, memory, voice_mode=True)
     print("코코:", answer)
-    speak(answer)
+    speak(clean_for_voice(answer))
 
 
 def voice_loop(memory):
@@ -667,7 +668,7 @@ def voice_loop(memory):
             if fail_count >= 3:
                 answer = "음성 대화를 종료합니다."
                 print("코코:", answer)
-                speak(answer)
+                speak(clean_for_voice(answer))
                 break
 
             continue
@@ -679,7 +680,7 @@ def voice_loop(memory):
         if user_input in ["코코야", "코코", "야코코", "야 코코"]:
             answer = "네, 부르셨나요?"
             print("코코:", answer)
-            speak(answer)
+            speak(clean_for_voice(answer))
 
             user_input = listen()
 
@@ -691,7 +692,7 @@ def voice_loop(memory):
         if is_exit_command(user_input):
             answer = "음성 대화 모드를 종료합니다."
             print("코코:", answer)
-            speak(answer)
+            speak(clean_for_voice(answer))
             break
 
         answer = process_command(
@@ -701,7 +702,7 @@ def voice_loop(memory):
         )
 
         print("코코:", answer)
-        speak(answer)
+        speak(clean_for_voice(answer))
 
 
 def main():
@@ -720,7 +721,7 @@ def main():
     print(startup_message)
     print()
 
-    speak(startup_message)
+    speak(clean_for_voice(startup_message))
 
     briefing = build_morning_briefing(memory)
 
@@ -728,7 +729,7 @@ def main():
     print(briefing)
     print()
 
-    speak(briefing)
+    speak(clean_for_voice(briefing))
 
     print("코코 AI 10.0 시작!")
     print(f"모델: {MODEL_NAME}")
@@ -768,7 +769,7 @@ def main():
 
         if assistant_answer:
             print("코코:", assistant_answer)
-            speak(assistant_answer)
+            speak(clean_for_voice(assistant_answer))
             continue
 
         goal_answer = handle_goal_command(user_input, memory)
