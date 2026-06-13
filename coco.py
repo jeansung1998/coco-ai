@@ -17,6 +17,7 @@ from dashboard_engine import handle_dashboard_command
 from startup_assistant import build_startup_message
 from morning_briefing import build_morning_briefing
 from conversation_engine import natural_conversation
+from emotion_engine import handle_emotion
 from voice_filter import clean_for_voice
 from voice_message_engine import (
     startup_voice_message,
@@ -827,6 +828,16 @@ def main():
         if conversation_answer:
             print("코코:", conversation_answer)
             speak(conversation_answer)
+            continue
+
+        emotion_answer = handle_emotion(
+            user_input,
+            memory
+        )
+
+        if emotion_answer:
+            print("코코:", emotion_answer)
+            speak(emotion_answer)
             continue
 
         answer = process_command(user_input, memory)
