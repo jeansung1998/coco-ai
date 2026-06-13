@@ -972,6 +972,241 @@ def build_growth_report(memory):
 
     return "\n".join(lines)
 
+def build_growth_level_report(memory):
+    history = load_project_history()
+    goals = load_project_goals()
+
+    facts_count = len(memory.get("facts", []))
+    likes_count = len(memory.get("likes", {}))
+    habits_count = len(memory.get("habits", {}))
+    relations_count = len(memory.get("relations", {}))
+
+    project_count = len(history.get("history", []))
+    completed_count = len(goals.get("completed", []))
+
+    score = (
+        facts_count
+        + likes_count
+        + habits_count
+        + relations_count
+        + project_count
+        + completed_count
+    )
+
+    if score >= 100:
+        level = "앱 출시 단계"
+    elif score >= 50:
+        level = "고급 개발 AI"
+    elif score >= 20:
+        level = "중급 개발 AI"
+    else:
+        level = "초급 개발 AI"
+
+    lines = []
+    lines.append("[코코 성장 추세]")
+    lines.append("")
+    lines.append(f"기억: {facts_count}개")
+    lines.append(f"취향: {likes_count}개")
+    lines.append(f"습관: {habits_count}개")
+    lines.append(f"관계: {relations_count}개")
+    lines.append("")
+    lines.append(f"프로젝트 기록: {project_count}개")
+    lines.append(f"완료 목표: {completed_count}개")
+    lines.append("")
+    lines.append(f"성장 등급: {level}")
+    lines.append("")
+    lines.append("다음 단계:")
+    lines.append("- 앱 UI 제작")
+    lines.append("- 모바일 버전 준비")
+
+    return "\n".join(lines)
+
+def build_app_launch_checklist():
+    lines = []
+
+    lines.append("[앱 출시 준비 체크리스트]")
+    lines.append("")
+    lines.append("1. 핵심 기능 정리")
+    lines.append("2. 앱 UI 화면 설계")
+    lines.append("3. 실행 파일 만들기")
+    lines.append("4. 설치 파일 만들기")
+    lines.append("5. 테스트 버전 배포")
+    lines.append("6. 오류 로그 수집")
+    lines.append("7. 개인정보/보안 점검")
+    lines.append("8. GitHub 릴리즈 정리")
+    lines.append("")
+    lines.append("추천 다음 작업:")
+    lines.append("- 먼저 앱 UI 화면 설계부터 시작")
+
+    return "\n".join(lines)
+
+def coco_reply(user_input, memory=None, voice=False):
+    if memory is None:
+        memory = load_memory()
+
+    user_input = user_input.strip()
+
+    simple_text = user_input.replace("코코", "").strip()
+
+    if simple_text in ["안녕", "안녕하세요", "하이"]:
+        return "안녕하세요. 반가워요."
+
+    if not user_input:
+        return ""
+
+    if "오늘 개발 정리해줘" in user_input:
+        answer = build_project_review()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "코코 AI 개발 현황 보여줘" in user_input or "프로젝트 통계 보여줘" in user_input:
+        answer = build_project_stats(memory)
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if user_input.startswith("프로젝트 목표"):
+        goal = user_input.replace("프로젝트 목표", "").strip()
+        if goal:
+            answer = set_project_goal(goal)
+        else:
+            answer = "목표 내용을 말해줘."
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "현재 목표 뭐야" in user_input:
+        answer = get_project_goal()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "목표 완료" in user_input:
+        answer = complete_project_goal()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "완료된 목표 보여줘" in user_input:
+        answer = show_completed_goals()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "코코 성장 보고서 보여줘" in user_input or "성장 리포트 보여줘" in user_input:
+        answer = build_growth_report(memory)
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "코코 얼마나 성장했어" in user_input or "성장 추세 보여줘" in user_input:
+        answer = build_growth_level_report(memory)
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "앱 출시 준비 보여줘" in user_input or "출시 체크리스트 보여줘" in user_input:
+        answer = build_app_launch_checklist()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if "프로젝트 히스토리 보여줘" in user_input or "개발 기록 보여줘" in user_input:
+        answer = show_project_history()
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if user_input.startswith("프로젝트 기록"):
+        content = user_input.replace("프로젝트 기록", "").strip()
+        if content:
+            answer = add_project_history("10.35", "GUI 연결", content)
+        else:
+            answer = "기록할 내용을 말해줘."
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if user_input.startswith("프로젝트 검색"):
+        keyword = user_input.replace("프로젝트 검색", "").strip()
+        if keyword:
+            answer = search_project_history(keyword)
+        else:
+            answer = "검색할 단어를 말해줘."
+        if voice:
+            speak(clean_for_voice(answer))
+        return answer
+
+    if user_input in ["종료", "끝", "exit", "quit"]:
+        return "종료할게요."
+
+    assistant_answer = personal_assistant_reply(user_input, memory)
+    if assistant_answer:
+        if voice:
+            speak(clean_for_voice(assistant_answer))
+        return assistant_answer
+
+    goal_answer = handle_goal_command(user_input, memory)
+    if goal_answer:
+        save_memory(memory)
+        if voice:
+            speak(goal_answer)
+        return goal_answer
+
+    schedule_answer = handle_schedule_command(user_input, memory)
+    if schedule_answer:
+        save_memory(memory)
+        if voice:
+            speak(schedule_answer)
+        return schedule_answer
+
+    coach_answer = handle_coach_command(user_input, memory)
+    if coach_answer:
+        if voice:
+            speak(coach_answer)
+        return coach_answer
+
+    summary_answer = handle_memory_summary_command(user_input, memory)
+    if summary_answer:
+        if voice:
+            speak(summary_answer)
+        return summary_answer
+
+    dashboard_answer = handle_dashboard_command(user_input, memory)
+    if dashboard_answer:
+        if voice:
+            speak(dashboard_answer)
+        return dashboard_answer
+
+    conversation_answer = natural_conversation(user_input, memory)
+    if conversation_answer:
+        if voice:
+            speak(conversation_answer)
+        return conversation_answer
+
+    emotion_answer = handle_emotion(user_input, memory)
+    if emotion_answer:
+        if voice:
+            speak(emotion_answer)
+        return emotion_answer
+
+    relationship_answer = handle_relationship_command(user_input, memory)
+    if relationship_answer:
+        save_memory(memory)
+        if voice:
+            speak(relationship_answer)
+        return relationship_answer
+
+    project_answer = handle_project_command(user_input, memory)
+    if project_answer:
+        if voice:
+            speak(project_answer)
+        return project_answer
+
+    answer = process_command(user_input, memory)
+    return answer
+
 def main():
     memory = load_memory()
 
@@ -1069,6 +1304,20 @@ def main():
 
         if "코코 성장 보고서 보여줘" in user_input or "성장 리포트 보여줘" in user_input:
             answer = build_growth_report(memory)
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "코코 얼마나 성장했어" in user_input or "성장 추세 보여줘" in user_input:
+            answer = build_growth_level_report(memory)
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "앱 출시 준비 보여줘" in user_input or "출시 체크리스트 보여줘" in user_input:
+            answer = build_app_launch_checklist()
 
             print("코코:", answer)
             speak(clean_for_voice(answer))

@@ -55,18 +55,18 @@ def listen():
 
     recognizer.energy_threshold = 300
     recognizer.dynamic_energy_threshold = True
-    recognizer.pause_threshold = 1.4
-    recognizer.non_speaking_duration = 0.8
+    recognizer.pause_threshold = 1.0
+    recognizer.non_speaking_duration = 0.4
 
     try:
         with sr.Microphone() as source:
             print("코코: 듣는 중입니다.")
-            recognizer.adjust_for_ambient_noise(source, duration=0.8)
+            recognizer.adjust_for_ambient_noise(source, duration=0.6)
 
             audio = recognizer.listen(
                 source,
-                timeout=10,
-                phrase_time_limit=15
+                timeout=3,
+                phrase_time_limit=5
             )
 
         try:
@@ -74,6 +74,8 @@ def listen():
                 audio,
                 language="ko-KR"
             )
+
+            print("인식 결과:", text)
 
             text = text.strip()
             return remove_wake_word(text)
