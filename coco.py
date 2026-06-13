@@ -824,6 +824,38 @@ def build_project_review():
 
     return "\n".join(lines)
 
+def build_project_stats(memory):
+    history = load_project_history()
+    project_items = history.get("history", [])
+
+    facts_count = len(memory.get("facts", []))
+    likes_count = len(memory.get("likes", {}))
+    habits_count = len(memory.get("habits", {}))
+    projects_count = len(memory.get("projects", {}))
+    relations_count = len(memory.get("relations", {}))
+
+    latest_title = "없음"
+    if project_items:
+        latest_title = project_items[-1].get("title", "없음")
+
+    lines = []
+    lines.append("[코코 AI 개발 현황]")
+    lines.append("")
+    lines.append("프로젝트명: 코코 AI")
+    lines.append(f"현재 버전: {history.get('current_version', '알 수 없음')}")
+    lines.append(f"프로젝트 기록 수: {len(project_items)}개")
+    lines.append("")
+    lines.append("[기억 데이터]")
+    lines.append(f"- 기억 수: {facts_count}개")
+    lines.append(f"- 취향 수: {likes_count}개")
+    lines.append(f"- 습관 수: {habits_count}개")
+    lines.append(f"- 프로젝트 수: {projects_count}개")
+    lines.append(f"- 관계 수: {relations_count}개")
+    lines.append("")
+    lines.append(f"최근 업데이트: {latest_title}")
+
+    return "\n".join(lines)
+
 def main():
     memory = load_memory()
 
@@ -874,6 +906,13 @@ def main():
 
         if "오늘 개발 정리해줘" in user_input:
             answer = build_project_review()
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if "코코 AI 개발 현황 보여줘" in user_input or "프로젝트 통계 보여줘" in user_input:
+            answer = build_project_stats(memory)
 
             print("코코:", answer)
             speak(clean_for_voice(answer))
