@@ -13,6 +13,7 @@ from goal_engine import handle_goal_command
 from schedule_engine import handle_schedule_command
 from coach_engine import handle_coach_command
 from memory_summary_engine import handle_memory_summary_command
+from dashboard_engine import handle_dashboard_command
 
 try:
     from logger import log
@@ -782,6 +783,16 @@ def main():
         if summary_answer:
             print("코코:", summary_answer)
             speak(summary_answer)
+            continue
+
+        dashboard_answer = handle_dashboard_command(
+            user_input,
+            memory
+        )
+
+        if dashboard_answer:
+            print("코코:", dashboard_answer)
+            speak(dashboard_answer)
             continue
 
         answer = process_command(user_input, memory)
