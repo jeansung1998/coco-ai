@@ -18,6 +18,8 @@ from startup_assistant import build_startup_message
 from morning_briefing import build_morning_briefing
 from conversation_engine import natural_conversation
 from emotion_engine import handle_emotion
+from relationship_engine import handle_relationship_command
+from project_manager import handle_project_command
 from voice_filter import clean_for_voice
 from voice_message_engine import (
     startup_voice_message,
@@ -838,6 +840,29 @@ def main():
         if emotion_answer:
             print("코코:", emotion_answer)
             speak(emotion_answer)
+            continue
+
+        relationship_answer = handle_relationship_command(
+            user_input,
+            memory
+        )
+
+        if relationship_answer:
+            print("코코:", relationship_answer)
+
+            save_memory(memory)
+
+            speak(relationship_answer)
+            continue
+
+        project_answer = handle_project_command(
+            user_input,
+            memory
+        )
+
+        if project_answer:
+            print("코코:", project_answer)
+            speak(project_answer)
             continue
 
         answer = process_command(user_input, memory)
