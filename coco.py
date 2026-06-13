@@ -14,6 +14,7 @@ from schedule_engine import handle_schedule_command
 from coach_engine import handle_coach_command
 from memory_summary_engine import handle_memory_summary_command
 from dashboard_engine import handle_dashboard_command
+from startup_assistant import build_startup_message
 
 try:
     from logger import log
@@ -710,6 +711,14 @@ def main():
         "텍스트 명령과 음성 명령을 함께 처리 가능."
     )
     save_memory(memory)
+
+    startup_message = build_startup_message(memory)
+
+    print()
+    print(startup_message)
+    print()
+
+    speak(startup_message)
 
     print("코코 AI 10.0 시작!")
     print(f"모델: {MODEL_NAME}")
