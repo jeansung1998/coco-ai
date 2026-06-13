@@ -15,6 +15,8 @@ from coach_engine import handle_coach_command
 from memory_summary_engine import handle_memory_summary_command
 from dashboard_engine import handle_dashboard_command
 from startup_assistant import build_startup_message
+from morning_briefing import build_morning_briefing
+from conversation_engine import natural_conversation
 
 try:
     from logger import log
@@ -720,6 +722,14 @@ def main():
 
     speak(startup_message)
 
+    briefing = build_morning_briefing(memory)
+
+    print()
+    print(briefing)
+    print()
+
+    speak(briefing)
+
     print("코코 AI 10.0 시작!")
     print(f"모델: {MODEL_NAME}")
     print("음성 입력/출력 연결 완료")
@@ -802,6 +812,16 @@ def main():
         if dashboard_answer:
             print("코코:", dashboard_answer)
             speak(dashboard_answer)
+            continue
+
+        conversation_answer = natural_conversation(
+            user_input,
+            memory
+        )
+
+        if conversation_answer:
+            print("코코:", conversation_answer)
+            speak(conversation_answer)
             continue
 
         answer = process_command(user_input, memory)
