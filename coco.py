@@ -7,7 +7,9 @@ import urllib.request
 import ollama
 from pc_control import handle_pc_command
 from voice import listen, speak, is_exit_command
+
 from assistant_engine import personal_assistant_reply
+from goal_engine import handle_goal_command
 
 try:
     from logger import log
@@ -744,6 +746,14 @@ def main():
         if assistant_answer:
             print("코코:", assistant_answer)
             speak(assistant_answer)
+            continue
+
+        goal_answer = handle_goal_command(user_input, memory)
+
+        if goal_answer:
+            print("코코:", goal_answer)
+            save_memory(memory)
+            speak(goal_answer)
             continue
 
         answer = process_command(user_input, memory)
