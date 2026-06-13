@@ -1,6 +1,9 @@
 import os
 import json
 from datetime import datetime
+
+PROJECT_HISTORY_FILE = "project_history.json"
+
 import urllib.parse
 import urllib.request
 
@@ -711,6 +714,83 @@ def voice_loop(memory):
         print("코코:", answer)
         speak(clean_for_voice(answer))
 
+def load_project_history():
+    if not os.path.exists(PROJECT_HISTORY_FILE):
+        return {
+            "project_name": "코코 AI",
+            "current_version": "10.26",
+            "history": []
+        }
+
+    with open(PROJECT_HISTORY_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_project_history(history):
+    with open(PROJECT_HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+
+def add_project_history(version, title, content):
+    history = load_project_history()
+
+    item = {
+        "version": version,
+        "title": title,
+        "content": content,
+        "time": datetime.now().isoformat()
+    }
+
+    history["current_version"] = version
+    history["history"].append(item)
+
+    save_project_history(history)
+
+    return f"{version} 프로젝트 기록 저장 완료"
+
+
+def show_project_history():
+    history = load_project_history()
+
+    if not history["history"]:
+        return "프로젝트 기록이 없습니다."
+
+    lines = ["[코코 AI 프로젝트 히스토리]"]
+
+    for item in history["history"][-10:]:
+        lines.append(
+            f"- {item['version']} | {item['title']} | {item['content']}"
+        )
+
+    return "\n".join(lines)
+
+
+def search_project_history(keyword):
+    history = load_project_history()
+
+    results = []
+
+    for item in history["history"]:
+        text = (
+            item.get("version", "")
+            + item.get("title", "")
+            + item.get("content", "")
+        )
+
+        if keyword in text:
+            results.append(item)
+
+    if not results:
+        return f"'{keyword}' 관련 기록이 없습니다."
+
+    lines = [f"[{keyword} 검색 결과]"]
+
+    for item in results:
+        lines.append(
+            f"- {item['version']} | {item['title']} | {item['content']}"
+        )
+
+    return "\n".join(lines)
 
 def main():
     memory = load_memory()
@@ -758,6 +838,40 @@ def main():
         user_input = input("나: ").strip()
 
         if not user_input:
+            continue
+
+        if "프로젝트 히스토리 보여줘" in user_input or "개발 기록 보여줘" in user_input:
+            answer = show_project_history()
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if user_input.startswith("프로젝트 기록"):
+            content = user_input.replace("프로젝트 기록", "").strip()
+
+            if content:
+                answer = add_project_history(
+                    "10.26",
+                    "프로젝트 히스토리 기록",
+                    content
+                )
+            else:
+                answer = "기록할 내용을 말해줘."
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
+            continue
+
+        if user_input.startswith("프로젝트 검색"):
+            keyword = user_input.replace("프로젝트 검색", "").strip()
+
+            if keyword:
+                answer = search_project_history(keyword)
+            else:
+                answer = "검색할 단어를 말해줘."
+
+            print("코코:", answer)
+            speak(clean_for_voice(answer))
             continue
 
         if user_input in ["종료", "끝", "exit", "quit"]:
