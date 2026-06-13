@@ -11,6 +11,7 @@ from voice import listen, speak, is_exit_command
 from assistant_engine import personal_assistant_reply
 from goal_engine import handle_goal_command
 from schedule_engine import handle_schedule_command
+from coach_engine import handle_coach_command
 
 try:
     from logger import log
@@ -763,6 +764,13 @@ def main():
             print("코코:", schedule_answer)
             save_memory(memory)
             speak(schedule_answer)
+            continue
+
+        coach_answer = handle_coach_command(user_input, memory)
+
+        if coach_answer:
+            print("코코:", coach_answer)
+            speak(coach_answer)
             continue
 
         answer = process_command(user_input, memory)
