@@ -145,5 +145,17 @@
       "title": "코코 AI 앱 출시",
       "done": false
     }
+  ],
+  "schedules": [
+    {
+      "date": "2026-06-13",
+      "title": "코코 AI 10.14 만들기",
+      "done": false
+    },
+    {
+      "date": "2026-06-14",
+      "title": "GitHub 백업 확인",
+      "done": false
+    }
   ]
 }
