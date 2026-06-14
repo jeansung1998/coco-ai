@@ -88,6 +88,91 @@ def load_memory():
     save_json(MEMORY_FILE, memory)
     return memory
 
+def load_memory():
+    memory = load_json(MEMORY_FILE, default_memory())
+
+    for key, value in default_memory().items():
+        if key not in memory:
+            memory[key] = value
+
+    memory["history"] = [
+        h for h in memory.get("history", [])
+        if h.get("user") and h.get("coco")
+    ][-20:]
+
+    memory["facts"] = [
+        f for f in memory.get("facts", [])
+        if f.get("content")
+    ]
+
+    save_json(MEMORY_FILE, memory)
+    return memory
+
+def integrated_memory_search(keyword):
+    memory = load_memory()
+    results = []
+
+    for group_name, group in [
+        ("프로필", memory.get("profile", {})),
+        ("취향", memory.get("likes", {})),
+        ("프로젝트", memory.get("projects", {}))
+    ]:
+        for k, v in group.items():
+            if keyword in str(k) or keyword in str(v):
+                results.append(
+                    f"[{group_name}] {k}: {v}"
+                )
+
+    for item in memory.get("facts", []):
+        content = item.get("content", "")
+        if keyword in content:
+            results.append(
+                f"[기억] {content}"
+            )
+
+    for item in memory.get("history", []):
+        user_text = item.get("user", "")
+        coco_text = item.get("coco", "")
+
+        if (
+            keyword in user_text
+            or keyword in coco_text
+        ):
+            results.append(
+                f"[대화] 나:{user_text}"
+            )
+
+    return results
+
+def search_chat_history_file(keyword):
+    try:
+        if not os.path.exists("chat_history.json"):
+            return []
+
+        with open(
+            "chat_history.json",
+            "r",
+            encoding="utf-8"
+        ) as f:
+            history = json.load(f)
+
+        results = []
+
+        for item in history:
+            message = str(
+                item.get(
+                    "message",
+                    ""
+                )
+            )
+
+            if keyword in message:
+                results.append(message)
+
+        return results[-10:]
+
+    except Exception:
+        return []
 
 def save_memory(memory):
     save_json(MEMORY_FILE, memory)
@@ -407,6 +492,31 @@ def ask_ai(user_input, memory):
 def process_command(user_input, memory, voice_mode=False):
     user_input = user_input.strip()
     compact_input = user_input.replace(" ", "")
+
+    if user_input.startswith("통합 검색:"):
+        try:
+            keyword = user_input.replace("통합 검색:", "").strip()
+
+            if not keyword:
+                return "검색어를 입력해줘."
+
+            memory_results = integrated_memory_search(keyword)
+            chat_results = search_chat_history_file(keyword)
+
+            return (
+                "[통합 검색 결과]\n\n"
+                + "=== 기억 검색 결과 ===\n"
+                + ("\n".join(memory_results[-10:]) if memory_results else "기억 검색 결과가 없습니다.")
+                + "\n\n=== 대화 검색 결과 ===\n"
+                + (
+                    "\n".join(chat_results)
+                    if chat_results
+                    else "대화 검색 결과가 없습니다."
+                )
+            )    
+            
+        except Exception as e:
+            return f"통합 검색 오류: {e}"
 
     pc_aliases = {
 
@@ -1081,6 +1191,101 @@ def coco_reply(user_input, memory=None, voice=False):
         if voice:
             speak(clean_for_voice(answer))
         return answer
+    
+    if "코코 상태 보여줘" in user_input:
+        try:
+            import json
+            import os
+
+            chat_count = 0
+
+            if os.path.exists("chat_history.json"):
+                with open(
+                    "chat_history.json",
+                    "r",
+                    encoding="utf-8"
+                ) as f:
+                    chat_count = len(json.load(f))
+
+            memory_count = len(memory.get("facts", []))
+
+            project_count = len(
+                memory.get("projects", {})
+            )
+
+            answer = (
+                "코코 AI 상태\n\n"
+                "버전: 10.42\n"
+                f"대화 기록 수: {chat_count}\n"
+                f"기억 수: {memory_count}\n"
+                f"프로젝트 수: {project_count}"
+            )
+
+            return answer
+
+        except Exception as e:
+            return f"상태 확인 오류: {e}"
+        
+    if user_input.startswith("대화 검색:"):
+        try:
+            import json
+            import os
+
+            keyword = (
+                user_input
+                .replace("대화 검색:", "")
+                .strip()
+            )
+
+            if not keyword:
+                return "검색어를 입력해줘."
+
+            if not os.path.exists(
+                "chat_history.json"
+            ):
+                return "대화 기록이 없습니다."
+
+            with open(
+                "chat_history.json",
+                "r",
+                encoding="utf-8"
+            ) as f:
+                history = json.load(f)
+
+            results = []
+
+            for item in history:
+                message = item.get(
+                    "message",
+                    ""
+                )
+
+                if message.startswith("대화 검색:"):
+                    continue
+
+                if "[대화 검색 결과]" in message:
+                    continue
+
+                if keyword in message:
+                    results.append(
+                        f"{item.get('time')}\n"
+                        f"{item.get('sender')}: "
+                        f"{message}"
+                    )
+
+            if not results:
+                return (
+                    f"'{keyword}' "
+                    "검색 결과가 없습니다."
+                )
+
+            return (
+                "[대화 검색 결과]\n\n"
+                + "\n\n".join(results[-10:])
+            )
+
+        except Exception as e:
+            return f"검색 오류: {e}" 
 
     if "목표 완료" in user_input:
         answer = complete_project_goal()
