@@ -208,7 +208,7 @@ def memory_text(memory):
         lines.append(f"- {k}: {v}")    
 
     lines.append("[기억]")
-    for item in memory.get("facts", []):
+    for item in memory.get("facts", [])[-5:]:
         lines.append(f"- {item.get('content')}")
 
     lines.append("[최근 대화]")
@@ -307,11 +307,21 @@ def auto_memory(memory, text):
             " 퇴근",
             " 하지만",
             " 근데"
+            " 이야"
         ]
 
         for word in split_words:
             if word in value:
                 value = value.split(word, 1)[0].strip()
+
+        if value.endswith("?"):
+            return None
+
+        if value.endswith("이야"):
+            value = value[:-2].strip()
+
+        if value.endswith("야"):
+            value = value[:-1].strip()        
 
         if key and value:
             memory["likes"][key] = value
@@ -492,6 +502,16 @@ def ask_ai(user_input, memory):
 def process_command(user_input, memory, voice_mode=False):
     user_input = user_input.strip()
     compact_input = user_input.replace(" ", "")
+
+    # 10.46 빠른 응답: 간단한 말은 AI 모델 호출 없이 바로 처리
+    if compact_input in ["안녕", "안녕하세요", "하이", "ㅎㅇ"]:
+        return "안녕! 나는 코코 AI야. 바로 대답할게."
+
+    if "좋아하는음식" in compact_input and "뭐" in compact_input:
+        food = memory.get("likes", {}).get("음식")
+        if food:
+            return f"네가 좋아하는 음식은 {food}야."
+        return "아직 좋아하는 음식을 기억하지 못했어."
 
     if user_input.startswith("통합 검색:"):
         try:
