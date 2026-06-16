@@ -148,7 +148,23 @@ def fast_reply(user_input, memory):
         value = likes.get(category)
 
         if value:
-            return f"네가 좋아하는 {category}은 {value}이야."
+
+            if str(value).endswith(("아", "야")):
+                return f"네가 좋아하는 {category}은 {value}."
+
+            return f"네가 좋아하는 {category}은 {value}야."
+        
+    if text in ["내 취향 보여줘", "취향 보여줘", "내 취향은 뭐야?"]:
+
+        if not likes:
+            return "아직 기억된 취향이 없어."
+
+        lines = ["[취향]", ""]
+
+        for k, v in likes.items():
+            lines.append(f"- {k}: {v}")
+
+        return "\n".join(lines)
 
     if text in ["나는 어떤 사람이야?", "나는 어떤 사람이야", "나에 대해 말해줘"]:
         lines = []
