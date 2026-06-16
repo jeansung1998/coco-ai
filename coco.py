@@ -108,6 +108,111 @@ def load_memory():
     save_json(MEMORY_FILE, memory)
     return memory
 
+def fast_reply(user_input, memory):
+    text = user_input.strip()
+
+    profile = memory.get("profile", {})
+    likes = memory.get("likes", {})
+    habits = memory.get("habits", {})
+
+    if text in ["내 이름은 뭐야?", "내 이름 뭐야?", "나는 누구야?"]:
+        name = profile.get("name") or profile.get("이름")
+        if name:
+            return f"네 이름은 {name}이야."
+        return "아직 네 이름을 기억하지 못했어."
+
+    if text in ["내가 좋아하는 색은?", "내가 좋아하는 색이 뭐야?", "좋아하는 색 뭐야?"]:
+        color = likes.get("color") or likes.get("색")
+        if color:
+            return f"네가 좋아하는 색은 {color}이야."
+        return "아직 좋아하는 색을 기억하지 못했어."
+
+    if text in ["내가 좋아하는 음식은?", "내가 좋아하는 음식이 뭐야?", "좋아하는 음식 뭐야?"]:
+        food = likes.get("food") or likes.get("음식")
+        if food:
+            return f"네가 좋아하는 음식은 {food}이야."
+        return "아직 좋아하는 음식을 기억하지 못했어."
+    
+    if "좋아하는" in text and text.endswith("?"):
+
+        category = (
+            text.replace("내가 ", "")
+            .replace("좋아하는 ", "")
+            .replace("은?", "")
+            .replace("는?", "")
+            .replace("이 뭐야?", "")
+            .replace("뭐야?", "")
+            .strip()
+        )
+
+        value = likes.get(category)
+
+        if value:
+            return f"네가 좋아하는 {category}은 {value}이야."
+
+    if text in ["나는 어떤 사람이야?", "나는 어떤 사람이야", "나에 대해 말해줘"]:
+        lines = []
+
+        color = likes.get("color") or likes.get("색")
+        food = likes.get("food") or likes.get("음식")
+
+        if color:
+            lines.append(f"- {color}을 좋아해")
+
+        if food:
+            lines.append(f"- {food}를 좋아해")
+
+        for k, v in habits.items():
+            if k == "주말":
+                lines.append(f"- 주말에는 {v}")
+            elif k == "퇴근후":
+                lines.append(f"- 퇴근 후에는 {v}")
+            elif "자주하는것" in k:
+                lines.append(f"- {v}")
+            else:
+                lines.append(f"- {k}: {v}")
+
+        if lines:
+            return "내가 기억하기로는:\n\n" + "\n".join(lines)
+
+        return "아직 너에 대한 정보가 충분하지 않아."
+    
+    if text in ["내 목표가 뭐야?", "현재 목표가 뭐야?", "목표가 뭐야?"]:
+        goal = get_project_goal()
+
+        if not goal or "없어" in str(goal):
+            return "아직 설정된 목표가 없어."
+        
+        goal = str(goal).replace("현재 목표는", "").replace("이야.", "").strip()
+
+        return f"현재 목표는 {goal}이야."
+
+    if text in ["내 프로젝트는 뭐야?", "프로젝트가 뭐야?", "현재 프로젝트는 뭐야?"]:
+        return "현재 진행 중인 프로젝트는 코코 AI야."
+
+    if text in ["오늘 뭐 해야 돼?", "오늘 할 일 뭐야?", "오늘 해야 할 일은?"]:
+        goal = get_project_goal()
+
+        if goal:
+            return (
+                "현재 진행 중인 목표는:\n"
+                f"- {goal}"
+            )
+
+        return "아직 목표가 설정되지 않았어."
+
+    if text in ["코코 상태", "상태 조회", "코코 상태 알려줘"]:
+        return (
+            "코코 AI 상태:\n"
+            "- GUI 데스크탑 모드: 연결됨\n"
+            "- 기억 시스템: 사용 중\n"
+            "- 대화 저장: 사용 중\n"
+            "- 개발 모델: llama3.2\n"
+            "- 빠른 응답 시스템: 작동 중"
+        )
+
+    return None
+
 def integrated_memory_search(keyword):
     memory = load_memory()
     results = []
@@ -1478,6 +1583,13 @@ def main():
         user_input = input("나: ").strip()
 
         if not user_input:
+            continue
+
+        quick = fast_reply(user_input, memory)
+
+        if quick:
+            print("코코:", quick)
+            speak(clean_for_voice(quick))
             continue
 
         if "오늘 개발 정리해줘" in user_input:
